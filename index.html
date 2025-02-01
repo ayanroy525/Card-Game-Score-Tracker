@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>4-Player Card Game Score Tracker</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 15px;
+    }
+    .player-card {
+      border: 2px solid #4CAF50;
+      border-radius: 10px;
+      padding: 15px;
+      background: #fff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s;
+    }
+    .player-card:hover {
+      transform: translateY(-5px);
+    }
+    input {
+      width: 90%;
+      padding: 8px;
+      margin: 5px 0;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .total {
+      font-size: 18px;
+      color: #2196F3;
+      margin: 10px 0;
+    }
+    .recent-scores {
+      max-height: 100px;
+      overflow-y: auto;
+      border: 1px dashed #ccc;
+      padding: 5px;
+      margin: 10px 0;
+      background: #f9f9f9;
+      border-radius: 5px;
+    }
+    .reset-btn, .export-btn {
+      padding: 10px 20px;
+      background: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 20px;
+      font-size: 16px;
+    }
+    .reset-btn:hover, .export-btn:hover {
+      background: #cc0000;
+    }
+    .export-btn {
+      background: #4CAF50;
+    }
+    .export-btn:hover {
+      background: #388E3C;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .container {
+        grid-template-columns: 1fr;
+      }
+      .reset-btn, .export-btn {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 style="text-align: center; color: #333;">4-Player Card Game Score Tracker</h1>
+  <div class="container">
+    <!-- Player 1 -->
+    <div class="player-card">
+      <input type="text" placeholder="Player 1 Name" class="player-name">
+      <div class="recent-scores" id="player1-scores">Recent Scores: <br></div>
+      <input type="number" class="score-input" data-player="0" placeholder="Add points">
+      <div class="total">Total: <span id="player1-total">0</span></div>
+    </div>
+    <!-- Player 2 -->
+    <div class="player-card">
+      <input type="text" placeholder="Player 2 Name" class="player-name">
+      <div class="recent-scores" id="player2-scores">Recent Scores: <br></div>
+      <input type="number" class="score-input" data-player="1" placeholder="Add points">
+      <div class="total">Total: <span id="player2-total">0</span></div>
+    </div>
+    <!-- Player 3 -->
+    <div class="player-card">
+      <input type="text" placeholder="Player 3 Name" class="player-name">
+      <div class="recent-scores" id="player3-scores">Recent Scores: <br></div>
+      <input type="number" class="score-input" data-player="2" placeholder="Add points">
+      <div class="total">Total: <span id="player3-total">0</span></div>
+    </div>
+    <!-- Player 4 -->
+    <div class="player-card">
+      <input type="text" placeholder="Player 4 Name" class="player-name">
+      <div class="recent-scores" id="player4-scores">Recent Scores: <br></div>
+      <input type="number" class="score-input" data-player="3" placeholder="Add points">
+      <div class="total">Total: <span id="player4-total">0</span></div>
+    </div>
+  </div>
+
+  <center>
+    <button class="reset-btn" onclick="resetAll()">Reset All Scores</button>
+    <button class="export-btn" onclick="exportToExcel()">Export to Excel</button>
+  </center>
+
+  <h2 id="result" style="text-align: center; color: #333;"></h2>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <script>
+    // Initialize players data
+    const players = Array(4).fill().map(() => ({
+      name: '',
+      scores: [],
+      total: 0
+    }));
+
+    // Score input handler
+    document.querySelectorAll('.score-input').forEach(input => {
+      input.addEventListener('change', (e) => {
+        const playerIndex = parseInt(e.target.dataset.player);
+        const value = parseFloat(e.target.value) || 0;
+        
+        // Update player data
+        players[playerIndex].scores.push(value);
+        players[playerIndex].total += value;
+        
+        // Update UI
+        updatePlayerDisplay(playerIndex);
+        e.target.value = ''; // Clear input
+        
+        // Check for winner and loser
+        checkGameOver();
+      });
+    });
+
+    // Name input handler
+    document.querySelectorAll('.player-name').forEach(input => {
+      input.addEventListener('input', (e) => {
+        const playerIndex = [...document.querySelectorAll('.player-name')].indexOf(e.target);
+        players[playerIndex].name = e.target.value;
+      });
+    });
+
+    // Update player display
+    function updatePlayerDisplay(playerIndex) {
+      const player = players[playerIndex];
+      
+      // Update recent scores
+      const scoresDiv = document.getElementById(`player${playerIndex+1}-scores`);
+      scoresDiv.innerHTML = `
+        <strong>Recent Scores:</strong><br>
+        ${player.scores.slice(-5).reverse().join('<br>')}
+      `;
+      
+      // Update total
+      document.getElementById(`player${playerIndex+1}-total`).textContent = player.total;
+    }
+
+    // Reset all scores
+    function resetAll() {
+      players.forEach((player, index) => {
+        player.scores = [];
+        player.total = 0;
+        updatePlayerDisplay(index);
+        document.querySelectorAll('.player-name')[index].value = '';
+      });
+      document.getElementById('result').textContent = '';
+      document.querySelectorAll('.score-input').forEach(input => input.disabled = false);
+    }
+
+    // Export to Excel
+    function exportToExcel() {
+      const ws_data = [['Player Name', 'Scores', 'Total']];
+      players.forEach(player => {
+        ws_data.push([player.name, player.scores.join(', '), player.total]);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Scores');
+      XLSX.writeFile(wb, 'player_scores.xlsx');
+    }
+
+    // Check for game over condition
+    function checkGameOver() {
+      const loser = players.find(player => player.total >= 100);
+      if (loser) {
+        const winner = players.reduce((min, player) => player.total < min.total ? player : min, players[0]);
+        document.getElementById('result').textContent = `Game Over! ${loser.name} is the loser. ${winner.name} is the winner with the lowest total score of ${winner.total}.`;
+        document.querySelectorAll('.score-input').forEach(input => input.disabled = true);
+      }
+    }
+  </script>
+</body>
+</html>
