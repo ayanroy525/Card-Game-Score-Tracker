@@ -86,13 +86,13 @@
     <div class="player-card">
       <input type="text" class="player-name" data-player="player3" value="Player 3">
       <div class="recent-scores" id="player3-scores">Recent Scores: <br></div>
-      <div class="total">Total: <span id="player3-total">0"></span></div>
+      <div class="total">Total: <span id="player3-total">0</span></div>
     </div>
     <!-- Player 4 -->
     <div class="player-card">
       <input type="text" class="player-name" data-player="player4" value="Player 4">
       <div class="recent-scores" id="player4-scores">Recent Scores: <br></div>
-      <div class="total">Total: <span id="player4-total">0"></span></div>
+      <div class="total">Total: <span id="player4-total">0</span></div>
     </div>
   </div>
 
@@ -110,6 +110,14 @@
       player2: { name: 'Player 2', scores: [], total: 0 },
       player3: { name: 'Player 3', scores: [], total: 0 },
       player4: { name: 'Player 4', scores: [], total: 0 }
+    };
+
+    // Load scores from local storage
+    window.onload = function() {
+      if (localStorage.getItem('players')) {
+        Object.assign(players, JSON.parse(localStorage.getItem('players')));
+        Object.keys(players).forEach(player => updatePlayerDisplay(player));
+      }
     };
 
     // Validate input to only allow numbers and spaces
@@ -133,6 +141,7 @@
       });
       
       e.target.value = ''; // Clear input
+      saveScores(); // Save scores to local storage
     });
 
     // Name input handler
@@ -140,6 +149,7 @@
       input.addEventListener('input', (e) => {
         const player = e.target.dataset.player;
         players[player].name = e.target.value;
+        saveScores(); // Save scores to local storage
       });
     });
 
@@ -166,6 +176,7 @@
         updatePlayerDisplay(player);
         document.querySelector(`.player-name[data-player="${player}"]`).value = players[player].name;
       });
+      saveScores(); // Save scores to local storage
     }
 
     // Edit a score
@@ -176,7 +187,13 @@
         players[player].scores[scoreIndex] = parseInt(newScore);
         players[player].total += players[player].scores[scoreIndex] - oldScore;
         updatePlayerDisplay(player);
+        saveScores(); // Save scores to local storage
       }
+    }
+
+    // Save scores to local storage
+    function saveScores() {
+      localStorage.setItem('players', JSON.stringify(players));
     }
 
     // Export to Excel
