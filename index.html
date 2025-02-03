@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>4-Player Card Game Score Tracker</title>
+  <title>Four-Player Card Game Score Tracker</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -10,7 +10,7 @@
     }
     .container {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
+      grid-template-columns: repeat(2, 1fr);
       gap: 15px;
     }
     .player-card {
@@ -44,6 +44,7 @@
       margin: 10px 0;
       background: #f9f9f9;
       border-radius: 5px;
+      cursor: pointer;
     }
     .reset-btn, .export-btn {
       padding: 10px 20px;
@@ -64,147 +65,130 @@
     .export-btn:hover {
       background: #388E3C;
     }
-
-    /* Responsive design */
-    @media (max-width: 768px) {
-      .container {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-    
-    @media (max-width: 480px) {
-      .container {
-        grid-template-columns: 1fr;
-      }
-      .reset-btn, .export-btn {
-        width: 100%;
-      }
-    }
   </style>
 </head>
 <body>
-  <h1 style="text-align: center; color: #333;">4-Player Card Game Score Tracker</h1>
+  <h1 style="text-align: center; color: #333;">Four-Player Card Game Score Tracker</h1>
   <div class="container">
     <!-- Player 1 -->
     <div class="player-card">
-      <input type="text" placeholder="Player 1 Name" class="player-name">
+      <input type="text" class="player-name" data-player="player1" value="Player 1">
       <div class="recent-scores" id="player1-scores">Recent Scores: <br></div>
-      <input type="number" class="score-input" data-player="0" placeholder="Add points">
       <div class="total">Total: <span id="player1-total">0</span></div>
     </div>
     <!-- Player 2 -->
     <div class="player-card">
-      <input type="text" placeholder="Player 2 Name" class="player-name">
+      <input type="text" class="player-name" data-player="player2" value="Player 2">
       <div class="recent-scores" id="player2-scores">Recent Scores: <br></div>
-      <input type="number" class="score-input" data-player="1" placeholder="Add points">
       <div class="total">Total: <span id="player2-total">0</span></div>
     </div>
     <!-- Player 3 -->
     <div class="player-card">
-      <input type="text" placeholder="Player 3 Name" class="player-name">
+      <input type="text" class="player-name" data-player="player3" value="Player 3">
       <div class="recent-scores" id="player3-scores">Recent Scores: <br></div>
-      <input type="number" class="score-input" data-player="2" placeholder="Add points">
-      <div class="total">Total: <span id="player3-total">0</span></div>
+      <div class="total">Total: <span id="player3-total">0"></span></div>
     </div>
     <!-- Player 4 -->
     <div class="player-card">
-      <input type="text" placeholder="Player 4 Name" class="player-name">
+      <input type="text" class="player-name" data-player="player4" value="Player 4">
       <div class="recent-scores" id="player4-scores">Recent Scores: <br></div>
-      <input type="number" class="score-input" data-player="3" placeholder="Add points">
-      <div class="total">Total: <span id="player4-total">0</span></div>
+      <div class="total">Total: <span id="player4-total">0"></span></div>
     </div>
   </div>
 
   <center>
+    <input type="text" id="round-scores" placeholder="Enter scores separated by spaces" oninput="validateInput(this)">
     <button class="reset-btn" onclick="resetAll()">Reset All Scores</button>
     <button class="export-btn" onclick="exportToExcel()">Export to Excel</button>
   </center>
 
-  <h2 id="result" style="text-align: center; color: #333;"></h2>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
   <script>
     // Initialize players data
-    const players = Array(4).fill().map(() => ({
-      name: '',
-      scores: [],
-      total: 0
-    }));
+    const players = {
+      player1: { name: 'Player 1', scores: [], total: 0 },
+      player2: { name: 'Player 2', scores: [], total: 0 },
+      player3: { name: 'Player 3', scores: [], total: 0 },
+      player4: { name: 'Player 4', scores: [], total: 0 }
+    };
+
+    // Validate input to only allow numbers and spaces
+    function validateInput(input) {
+      input.value = input.value.replace(/[^0-9 ]/g, '');
+    }
 
     // Score input handler
-    document.querySelectorAll('.score-input').forEach(input => {
-      input.addEventListener('change', (e) => {
-        const playerIndex = parseInt(e.target.dataset.player);
-        const value = parseFloat(e.target.value) || 0;
-        
-        // Update player data
-        players[playerIndex].scores.push(value);
-        players[playerIndex].total += value;
-        
-        // Update UI
-        updatePlayerDisplay(playerIndex);
-        e.target.value = ''; // Clear input
-        
-        // Check for winner and loser
-        checkGameOver();
+    document.getElementById('round-scores').addEventListener('change', (e) => {
+      const values = e.target.value.split(' ').map(Number).filter(Boolean);
+      const playerKeys = Object.keys(players);
+      
+      // Update player data
+      values.forEach((value, index) => {
+        if (index < playerKeys.length) {
+          const player = playerKeys[index];
+          players[player].scores.push(value);
+          players[player].total += value;
+          updatePlayerDisplay(player);
+        }
       });
+      
+      e.target.value = ''; // Clear input
     });
 
     // Name input handler
     document.querySelectorAll('.player-name').forEach(input => {
       input.addEventListener('input', (e) => {
-        const playerIndex = [...document.querySelectorAll('.player-name')].indexOf(e.target);
-        players[playerIndex].name = e.target.value;
+        const player = e.target.dataset.player;
+        players[player].name = e.target.value;
       });
     });
 
     // Update player display
-    function updatePlayerDisplay(playerIndex) {
-      const player = players[playerIndex];
+    function updatePlayerDisplay(player) {
+      const playerData = players[player];
       
       // Update recent scores
-      const scoresDiv = document.getElementById(`player${playerIndex+1}-scores`);
+      const scoresDiv = document.getElementById(`${player}-scores`);
       scoresDiv.innerHTML = `
         <strong>Recent Scores:</strong><br>
-        ${player.scores.slice(-5).reverse().join('<br>')}
+        ${playerData.scores.slice(-5).reverse().map((score, index) => `<span onclick="editScore('${player}', ${playerData.scores.length - 1 - index})">${score}</span>`).join('<br>')}
       `;
       
       // Update total
-      document.getElementById(`player${playerIndex+1}-total`).textContent = player.total;
+      document.getElementById(`${player}-total`).textContent = playerData.total;
     }
 
     // Reset all scores
     function resetAll() {
-      players.forEach((player, index) => {
-        player.scores = [];
-        player.total = 0;
-        updatePlayerDisplay(index);
-        document.querySelectorAll('.player-name')[index].value = '';
+      Object.keys(players).forEach(player => {
+        players[player].scores = [];
+        players[player].total = 0;
+        updatePlayerDisplay(player);
+        document.querySelector(`.player-name[data-player="${player}"]`).value = players[player].name;
       });
-      document.getElementById('result').textContent = '';
-      document.querySelectorAll('.score-input').forEach(input => input.disabled = false);
+    }
+
+    // Edit a score
+    function editScore(player, scoreIndex) {
+      const newScore = prompt("Enter new score:", players[player].scores[scoreIndex]);
+      if (newScore !== null) {
+        const oldScore = players[player].scores[scoreIndex];
+        players[player].scores[scoreIndex] = parseInt(newScore);
+        players[player].total += players[player].scores[scoreIndex] - oldScore;
+        updatePlayerDisplay(player);
+      }
     }
 
     // Export to Excel
     function exportToExcel() {
       const ws_data = [['Player Name', 'Scores', 'Total']];
-      players.forEach(player => {
-        ws_data.push([player.name, player.scores.join(', '), player.total]);
+      Object.keys(players).forEach(player => {
+        ws_data.push([players[player].name, players[player].scores.join(', '), players[player].total]);
       });
       const ws = XLSX.utils.aoa_to_sheet(ws_data);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Scores');
       XLSX.writeFile(wb, 'player_scores.xlsx');
-    }
-
-    // Check for game over condition
-    function checkGameOver() {
-      const loser = players.find(player => player.total >= 100);
-      if (loser) {
-        const winner = players.reduce((min, player) => player.total < min.total ? player : min, players[0]);
-        document.getElementById('result').textContent = `Game Over! ${loser.name} is the loser. ${winner.name} is the winner with the lowest total score of ${winner.total}.`;
-        document.querySelectorAll('.score-input').forEach(input => input.disabled = true);
-      }
     }
   </script>
 </body>
