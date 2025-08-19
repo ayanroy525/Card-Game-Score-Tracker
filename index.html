@@ -125,21 +125,20 @@
       input.value = input.value.replace(/[^0-9 ]/g, '');
     }
 
-    // Score input handler
+    // Score input handler (fixed to allow zero)
     document.getElementById('round-scores').addEventListener('change', (e) => {
-      const values = e.target.value.split(' ').map(Number).filter(Boolean);
+      const values = e.target.value.trim().split(/\s+/).map(v => v === '' ? null : Number(v));
       const playerKeys = Object.keys(players);
-      
-      // Update player data
+
       values.forEach((value, index) => {
-        if (index < playerKeys.length) {
+        if (index < playerKeys.length && value !== null && !isNaN(value)) {
           const player = playerKeys[index];
           players[player].scores.push(value);
           players[player].total += value;
           updatePlayerDisplay(player);
         }
       });
-      
+
       e.target.value = ''; // Clear input
       saveScores(); // Save scores to local storage
     });
@@ -156,14 +155,14 @@
     // Update player display
     function updatePlayerDisplay(player) {
       const playerData = players[player];
-      
+
       // Update recent scores
       const scoresDiv = document.getElementById(`${player}-scores`);
       scoresDiv.innerHTML = `
         <strong>Recent Scores:</strong><br>
         ${playerData.scores.slice(-5).reverse().map((score, index) => `<span onclick="editScore('${player}', ${playerData.scores.length - 1 - index})">${score}</span>`).join('<br>')}
       `;
-      
+
       // Update total
       document.getElementById(`${player}-total`).textContent = playerData.total;
     }
