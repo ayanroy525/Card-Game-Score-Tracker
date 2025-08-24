@@ -1,13 +1,705 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Gaming-Style Four-Player Card Game Score Tracker</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Four-Player Card Game Score Tracker</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --primary: #3a86ff;
+      --secondary: #8338ec;
+      --success: #06d6a0;
+      --danger: #ef476f;
+      --warning: #ffd166;
+      --dark: #073b4c;
+      --light: #f8f9fa;
+      --gray: #adb5bd;
+      --code-bg: #1e1e2e;
+      --card-bg: #2a2a3c;
+      --border-radius: 12px;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      color: var(--light);
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--gray);
+      font-weight: 300;
+    }
+
+    .game-board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+
+    .player-card {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 25px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: var(--transition);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .player-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      border-color: var(--primary);
+    }
+
+    .player-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      gap: 15px;
+    }
+
+    .player-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(45deg, var(--primary), var(--secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: white;
+    }
+
+    .player1 .player-avatar { background: linear-gradient(45deg, #3a86ff, #8338ec); }
+    .player2 .player-avatar { background: linear-gradient(45deg, #06d6a0, #118ab2); }
+    .player3 .player-avatar { background: linear-gradient(45deg, #ef476f, #8338ec); }
+    .player4 .player-avatar { background: linear-gradient(45deg, #ffd166, #06d6a0); }
+
+    .player-name-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 500;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .player-name-input:focus {
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 3px rgba(58, 134, 255, 0.3);
+    }
+
+    .score-section {
+      margin-bottom: 20px;
+    }
+
+    .recent-scores {
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .recent-scores::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .recent-scores::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+
+    .recent-scores::-webkit-scrollbar-thumb {
+      background: var(--primary);
+      border-radius: 3px;
+    }
+
+    .score-item {
+      display: inline-block;
+      padding: 4px 8px;
+      margin: 4px 4px 4px 0;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .score-item:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.05);
+    }
+
+    .score-positive {
+      color: var(--success);
+      border-color: rgba(6, 214, 160, 0.3);
+    }
+
+    .score-negative {
+      color: var(--danger);
+      border-color: rgba(239, 71, 111, 0.3);
+    }
+
+    .total-score {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .total-value {
+      font-size: 1.4rem;
+      transition: var(--transition);
+    }
+
+    .total-positive {
+      color: var(--success);
+    }
+
+    .total-negative {
+      color: var(--danger);
+    }
+
+    .total-icon {
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+
+    .input-controls {
+      background: var(--card-bg);
+      border-radius: var(--border-radius);
+      padding: 30px;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      margin-bottom: 30px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .score-input {
+      flex: 1;
+      min-width: 300px;
+      padding: 16px 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 1.1rem;
+      outline: none;
+      transition: var(--transition);
+      font-family: 'Courier New', monospace;
+    }
+
+    .score-input:focus {
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 3px rgba(58, 134, 255, 0.3);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 140px;
+      justify-content: center;
+    }
+
+    .btn-reset {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-reset:hover {
+      background: #cc0000;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(239, 71, 111, 0.4);
+    }
+
+    .btn-export {
+      background: var(--success);
+      color: white;
+    }
+
+    .btn-export:hover {
+      background: #05b080;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(6, 214, 160, 0.4);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2a6fd9;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(58, 134, 255, 0.4);
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      font-size: 0.9rem;
+      color: var(--gray);
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    @media (max-width: 768px) {
+      .game-board {
+        grid-template-columns: 1fr;
+      }
+
+      .input-group {
+        flex-direction: column;
+      }
+
+      .score-input {
+        min-width: auto;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .btn {
+        min-width: auto;
+      }
+
+      h1 {
+        font-size: 2.2rem;
+      }
+    }
+
+    /* Animation */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .player-card, .input-controls {
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .player-card:nth-child(1) { animation-delay: 0.1s; }
+    .player-card:nth-child(2) { animation-delay: 0.2s; }
+    .player-card:nth-child(3) { animation-delay: 0.3s; }
+    .player-card:nth-child(4) { animation-delay: 0.4s; }
+    .input-controls { animation-delay: 0.5s; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🎮 Card Game Score Tracker</h1>
+      <p class="subtitle">Track scores for your four-player card game with ease</p>
+    </header>
+
+    <div class="game-board">
+      <!-- Player 1 -->
+      <div class="player-card player1">
+        <div class="player-header">
+          <div class="player-avatar">P1</div>
+          <input type="text" class="player-name-input player-name" data-player="player1" value="Player 1">
+        </div>
+        <div class="score-section">
+          <h3>Recent Scores</h3>
+          <div class="recent-scores" id="player1-scores">
+            <div class="placeholder">No scores yet</div>
+          </div>
+        </div>
+        <div class="total-score">
+          <span>Total Score</span>
+          <span id="player1-total" class="total-value">0</span>
+        </div>
+      </div>
+
+      <!-- Player 2 -->
+      <div class="player-card player2">
+        <div class="player-header">
+          <div class="player-avatar">P2</div>
+          <input type="text" class="player-name-input player-name" data-player="player2" value="Player 2">
+        </div>
+        <div class="score-section">
+          <h3>Recent Scores</h3>
+          <div class="recent-scores" id="player2-scores">
+            <div class="placeholder">No scores yet</div>
+          </div>
+        </div>
+        <div class="total-score">
+          <span>Total Score</span>
+          <span id="player2-total" class="total-value">0</span>
+        </div>
+      </div>
+
+      <!-- Player 3 -->
+      <div class="player-card player3">
+        <div class="player-header">
+          <div class="player-avatar">P3</div>
+          <input type="text" class="player-name-input player-name" data-player="player3" value="Player 3">
+        </div>
+        <div class="score-section">
+          <h3>Recent Scores</h3>
+          <div class="recent-scores" id="player3-scores">
+            <div class="placeholder">No scores yet</div>
+          </div>
+        </div>
+        <div class="total-score">
+          <span>Total Score</span>
+          <span id="player3-total" class="total-value">0</span>
+        </div>
+      </div>
+
+      <!-- Player 4 -->
+      <div class="player-card player4">
+        <div class="player-header">
+          <div class="player-avatar">P4</div>
+          <input type="text" class="player-name-input player-name" data-player="player4" value="Player 4">
+        </div>
+        <div class="score-section">
+          <h3>Recent Scores</h3>
+          <div class="recent-scores" id="player4-scores">
+            <div class="placeholder">No scores yet</div>
+          </div>
+        </div>
+        <div class="total-score">
+          <span>Total Score</span>
+          <span id="player4-total" class="total-value">0</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-controls">
+      <div class="input-group">
+        <input type="text" id="round-scores" class="score-input" placeholder="Enter 4 scores separated by spaces (e.g., 15 -5 10 0)">
+      </div>
+      
+      <div class="action-buttons">
+        <button class="btn btn-primary" onclick="addScores()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+          </svg>
+          Add Scores
+        </button>
+        <button class="btn btn-export" onclick="exportToExcel()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+            <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
+          </svg>
+          Export to Excel
+        </button>
+        <button class="btn btn-reset" onclick="resetGame()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+          </svg>
+          Reset Game
+        </button>
+      </div>
+      
+      <div class="status-bar">
+        <div class="status-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+            <path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05z"/>
+          </svg>
+          <span id="round-count">Round 0</span>
+        </div>
+        <div class="status-item">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+          </svg>
+          <span id="leader-name">No leader yet</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Game state
+    const gameState = {
+      players: {
+        player1: { name: 'Player 1', scores: [], total: 0 },
+        player2: { name: 'Player 2', scores: [], total: 0 },
+        player3: { name: 'Player 3', scores: [], total: 0 },
+        player4: { name: 'Player 4', scores: [], total: 0 }
+      },
+      round: 0
+    };
+
+    // DOM Elements
+    const roundScoresInput = document.getElementById('round-scores');
+    const roundCountElement = document.getElementById('round-count');
+    const leaderNameElement = document.getElementById('leader-name');
+
+    // Initialize the game
+    function initGame() {
+      updatePlayerNames();
+      updateUI();
+    }
+
+    // Update player names from inputs
+    function updatePlayerNames() {
+      document.querySelectorAll('.player-name').forEach(input => {
+        const playerKey = input.dataset.player;
+        gameState.players[playerKey].name = input.value;
+      });
+    }
+
+    // Add event listeners to player name inputs
+    document.querySelectorAll('.player-name').forEach(input => {
+      input.addEventListener('input', updatePlayerNames);
+    });
+
+    // Add scores for a round
+    function addScores() {
+      const scoresInput = roundScoresInput.value.trim();
+      if (!scoresInput) {
+        alert('Please enter scores');
+        return;
+      }
+
+      const scores = scoresInput.split(/\s+/).map(s => parseInt(s));
+      
+      if (scores.length !== 4) {
+        alert('Please enter exactly 4 scores separated by spaces');
+        return;
+      }
+
+      if (scores.some(isNaN)) {
+        alert('Please enter valid numbers');
+        return;
+      }
+
+      // Update game state
+      gameState.round++;
+      let playerIndex = 1;
+      for (const playerKey in gameState.players) {
+        const score = scores[playerIndex - 1];
+        gameState.players[playerKey].scores.push(score);
+        gameState.players[playerKey].total += score;
+        playerIndex++;
+      }
+
+      // Update UI
+      updateUI();
+      
+      // Clear input
+      roundScoresInput.value = '';
+      roundScoresInput.focus();
+    }
+
+    // Update the entire UI
+    function updateUI() {
+      updatePlayerCards();
+      updateStatusBar();
+    }
+
+    // Update player cards
+    function updatePlayerCards() {
+      for (let i = 1; i <= 4; i++) {
+        const playerKey = `player${i}`;
+        const player = gameState.players[playerKey];
+        const scoresContainer = document.getElementById(`player${i}-scores`);
+        const totalElement = document.getElementById(`player${i}-total`);
+
+        // Update recent scores
+        if (player.scores.length === 0) {
+          scoresContainer.innerHTML = '<div class="placeholder">No scores yet</div>';
+        } else {
+          scoresContainer.innerHTML = '';
+          player.scores.forEach((score, index) => {
+            const scoreElement = document.createElement('div');
+            scoreElement.className = `score-item ${score >= 0 ? 'score-positive' : 'score-negative'}`;
+            scoreElement.textContent = score;
+            scoreElement.title = `Round ${index + 1}`;
+            scoresContainer.appendChild(scoreElement);
+          });
+        }
+
+        // Update total score
+        totalElement.textContent = player.total;
+        totalElement.className = `total-value ${player.total >= 0 ? 'total-positive' : 'total-negative'}`;
+      }
+    }
+
+    // Update status bar
+    function updateStatusBar() {
+      roundCountElement.textContent = `Round ${gameState.round}`;
+      
+      // Find leader
+      let leader = null;
+      let highestScore = -Infinity;
+      
+      for (const playerKey in gameState.players) {
+        const player = gameState.players[playerKey];
+        if (player.total > highestScore) {
+          highestScore = player.total;
+          leader = player;
+        }
+      }
+      
+      if (leader) {
+        leaderNameElement.textContent = `${leader.name} (${leader.total})`;
+      } else {
+        leaderNameElement.textContent = 'No leader yet';
+      }
+    }
+
+    // Export to Excel
+    function exportToExcel() {
+      // Prepare data
+      const data = [];
+      
+      // Header row
+      const header = ['Round'];
+      for (let i = 1; i <= 4; i++) {
+        header.push(gameState.players[`player${i}`].name);
+      }
+      header.push('Total');
+      data.push(header);
+      
+      // Data rows
+      for (let round = 0; round < gameState.round; round++) {
+        const row = [round + 1];
+        let total = 0;
+        for (let i = 1; i <= 4; i++) {
+          const score = gameState.players[`player${i}`].scores[round] || 0;
+          row.push(score);
+          total += score;
+        }
+        row.push(total);
+        data.push(row);
+      }
+      
+      // Totals row
+      const totalsRow = ['Total'];
+      let grandTotal = 0;
+      for (let i = 1; i <= 4; i++) {
+        const total = gameState.players[`player${i}`].total;
+        totalsRow.push(total);
+        grandTotal += total;
+      }
+      totalsRow.push(grandTotal);
+      data.push(totalsRow);
+      
+      // Create worksheet
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Game Scores");
+      
+      // Export
+      XLSX.writeFile(wb, "card_game_scores.xlsx");
+    }
+
+    // Reset game
+    function resetGame() {
+      if (confirm('Are you sure you want to reset the game? All data will be lost.')) {
+        gameState.round = 0;
+        for (const playerKey in gameState.players) {
+          gameState.players[playerKey].scores = [];
+          gameState.players[playerKey].total = 0;
+        }
+        updateUI();
+        roundScoresInput.value = '';
+      }
+    }
+
+    // Handle Enter key in input field
+    roundScoresInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        addScores();
+      }
+    });
+
+    // Initialize the game when page loads
+    window.addEventListener('DOMContentLoaded', initGame);
+  </script>
+</body>
 </html>
